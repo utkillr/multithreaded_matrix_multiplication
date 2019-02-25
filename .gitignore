@@ -108,3 +108,5 @@ venv.bak/
 # make
 cmake-build-debug/*
 .idea/*
+
+task.pdf
