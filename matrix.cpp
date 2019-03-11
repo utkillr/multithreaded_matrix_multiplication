@@ -161,7 +161,7 @@ Matrix* Matrix::multiplyOMP(Matrix *matrix1, Matrix* matrix2) {
     else {
         auto *resultMatrix = new Matrix(matrix1->getHeight(), matrix2->getWidth());
         if (resultMatrix->getHeight() >= resultMatrix->getWidth()) {
-            #pragma omp parallel for shared(matrix1, matrix2, resultMatrix) schedule(runtime)
+            #pragma omp parallel for shared(matrix1, matrix2, resultMatrix) schedule(dynamic)
             for (int i = 0; i < resultMatrix->getHeight(); i++) {
                 for (int j = 0; j < resultMatrix->getWidth(); j++) {
                     for (int r = 0; r < matrix1->getWidth(); r++) {
@@ -170,7 +170,7 @@ Matrix* Matrix::multiplyOMP(Matrix *matrix1, Matrix* matrix2) {
                 }
             }
         } else {
-            #pragma omp parallel for shared(matrix1, matrix2, resultMatrix) schedule(runtime)
+            #pragma omp parallel for shared(matrix1, matrix2, resultMatrix) schedule(dynamic)
             for (int j = 0; j < resultMatrix->getWidth(); j++) {
                 for (int i = 0; i < resultMatrix->getHeight(); i++) {
                     for (int r = 0; r < matrix1->getWidth(); r++) {

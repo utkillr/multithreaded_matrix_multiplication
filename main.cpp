@@ -29,7 +29,7 @@ int main() {
 
     omp_set_dynamic(0);
 
-    outputFile.open("C:\\university\\multithreading\\matrix_multiplication\\runtime_adj_output.csv");
+    outputFile.open("C:\\university\\multithreading\\matrix_multiplication\\output.csv");
 
     try {
         Matrix *multiplication;
@@ -39,6 +39,7 @@ int main() {
         multiplication = Matrix::multiply(matrix1, matrix2);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        std::cout << "No OMP time: " << duration.count() << std::endl;
 
         // Threads cycle
         for (int j = 1; j < launchTimes + 1; j++) {
@@ -52,7 +53,7 @@ int main() {
                 outputFile << duration.count() << ",";
                 bool res = multiplication->equals(multiplicationOMP);
                 std::cout << "Attempt: " << j << ". Threads: " << i << ". Right: "
-                          << multiplication->equals(multiplicationOMP) << std::endl;
+                          << multiplication->equals(multiplicationOMP) << ". Time: " << duration.count() << std::endl;
                 if (!res) {
                     delete multiplication;
                     delete multiplicationOMP;
