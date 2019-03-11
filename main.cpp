@@ -1,70 +1,97 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <omp.h>
 #include "matrix.h"
 #include "exception/matrix_multiplication_exception.h"
 #include "exception/matrix_initialization_exception.h"
 
-#define STRESS
-
 int main() {
     std::ifstream inputFile1, inputFile2;
     Matrix *matrix1, *matrix2;
+    std::ofstream outputFile;
 
     try {
-        inputFile1.open("C:\\university\\multithreading\\matrix_multiplication\\matrix1.txt");
-        inputFile2.open("C:\\university\\multithreading\\matrix_multiplication\\matrix2.txt");
-
-        #ifdef STRESS
-        matrix1 = Matrix::fromInputStreamStress(inputFile1, 30);
-        matrix2 = Matrix::fromInputStreamStress(inputFile2, 30);
-
-        #else
-        matrix1 = Matrix::fromInputStream(inputFile1);
-        matrix2 = Matrix::fromInputStream(inputFile2);
-
-        #endif
-
+        inputFile1.open("C:\\university\\multithreading\\matrix_multiplication\\flat_matrix1.txt");
+        inputFile2.open("C:\\university\\multithreading\\matrix_multiplication\\flat_matrix2.txt");
+        matrix1 = Matrix::fromInputStreamStress(inputFile1, 10 * 3);
+        matrix2 = Matrix::fromInputStreamStress(inputFile2, 10 * 3);
     } catch (MatrixInitializationException e) {
         std::cout << e.what();
+        return -1;
     }
 
-    #ifdef STRESS
-    std::cout << "Matrix 1: (" << matrix1->getHeight() << ", " << matrix1->getWidth() << ")" << std::endl;
-    std::cout << "Matrix 2: (" << matrix2->getHeight() << ", " << matrix2->getWidth() << ")" << std::endl;
+    int dynamic = omp_get_dynamic();
+    // Cores are suffocating at 4. So lets run up to 8 threads
+    int maxThreads = 8;
+    // We run 3 times to get avg
+    int launchTimes = 3;
 
-    #else
-    std::cout << "Matrix 1:" << std::endl;
-    matrix1->print(std::cout);
-    std::cout << std::endl << "Matrix 2:" << std::endl;
-    matrix2->print(std::cout);
+    omp_set_dynamic(0);
 
-    #endif
+    outputFile.open("C:\\university\\multithreading\\matrix_multiplication\\runtime_adj_output.csv");
 
     try {
         Matrix *multiplication;
+        Matrix *multiplicationOMP;
 
-        auto start2 = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
         multiplication = Matrix::multiply(matrix1, matrix2);
-        auto stop2 = std::chrono::high_resolution_clock::now();
-        auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(stop2 - start2);
-        std::cout << std::endl << "Multiplication:     " << duration2.count() << std::endl;
-        // multiplication->print(std::cout);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+
+        // Threads cycle
+        for (int j = 1; j < launchTimes + 1; j++) {
+            // Avg cycle
+            for (int i = 1; i < maxThreads + 1; i++) {
+                omp_set_num_threads(i);
+                start = std::chrono::high_resolution_clock::now();
+                multiplicationOMP = Matrix::multiplyOMP(matrix1, matrix2);
+                stop = std::chrono::high_resolution_clock::now();
+                duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+                outputFile << duration.count() << ",";
+                bool res = multiplication->equals(multiplicationOMP);
+                std::cout << "Attempt: " << j << ". Threads: " << i << ". Right: "
+                          << multiplication->equals(multiplicationOMP) << std::endl;
+                if (!res) {
+                    delete multiplication;
+                    delete multiplicationOMP;
+                    throw MatrixMultiplicationException(matrix1, matrix2);
+                }
+                delete multiplicationOMP;
+            }
+            outputFile << std::endl;
+        }
         delete multiplication;
 
-        auto start1 = std::chrono::high_resolution_clock::now();
-        multiplication = Matrix::multiplyOMP(matrix1, matrix2);
-        auto stop1 = std::chrono::high_resolution_clock::now();
-        auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(stop1 - start1);
-        std::cout << std::endl << "Multiplication OMP: " << duration1.count() << std::endl;
-        // multiplication->print(std::cout);
-        delete multiplication;
     } catch (MatrixMultiplicationException e) {
         std::cout << e.what();
     }
+
+    outputFile.close();
+
+    omp_set_dynamic(dynamic);
 
     delete matrix1;
     delete matrix2;
 
     return 0;
 }
+
+/*
+ * Open MP: Loop Parallelism
+ * Умеет по разному параллелить For.
+ *
+ * Подумать: какими способами можно параллеить?
+ * Попробовать разные способы параллелизма.
+ *
+ * Варианты: Параллелить форы (внешний, внутренний, средний)
+ * Задача: придумать n решений, попробовать несколько.
+ * Запускать по несколько раз, получать усредненное значение (по 3 раза at least)
+ * Не использовать чистый parallel for - юзать reduce и прочее
+ *
+ * # ... scheduled (static, 1)
+ * # ... scheduled (dynamic, 1)
+ * # Погуглить про чанки
+ * # Попробовать плохие матрицы (плоские, например)
+ */

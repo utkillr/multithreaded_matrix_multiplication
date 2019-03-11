@@ -3,6 +3,7 @@
 //
 
 #include <cstring>
+#include <omp.h>
 #include "matrix.h"
 #include "exception/matrix_initialization_exception.h"
 #include "exception/matrix_multiplication_exception.h"
@@ -110,6 +111,20 @@ int Matrix::getHeight() {
     return this->height;
 }
 
+bool Matrix::equals(Matrix *matrix) {
+    if (!this->height == matrix->getHeight() || !this->width == matrix->getWidth()) {
+        return false;
+    }
+    for (int i = 0; i < this->height; i++) {
+        for (int j = 0; j < this->width; j++) {
+            if (this->a[i][j] != matrix->a[i][j]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 void Matrix::print(std::ostream &out) {
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
@@ -127,15 +142,6 @@ Matrix* Matrix::multiply(Matrix* matrix1, Matrix *matrix2) {
     else {
         auto *resultMatrix = new Matrix(matrix1->getHeight(), matrix2->getWidth());
 
-//        int **array;
-//        int height = matrix1->getHeight();
-//        int width = matrix2->getWidth();
-//
-//        array = new int *[matrix1->getHeight()];
-//        for (int i = 0; i < height; i++) {
-//            array[i] = new int[width];
-//        }
-
         for (int i = 0; i < resultMatrix->getHeight(); i++) {
             for (int j = 0; j < resultMatrix->getWidth(); j++) {
                 for (int r = 0; r < matrix1->getWidth(); r++) {
@@ -144,15 +150,6 @@ Matrix* Matrix::multiply(Matrix* matrix1, Matrix *matrix2) {
             }
         }
         return resultMatrix;
-
-//        for (int i = 0; i < height; i++) {
-//            for (int j = 0; j < width; j++) {
-//                for (int r = 0; r < matrix1->getWidth(); r++) {
-//                    array[i][j] += array[i][j] + matrix1->a[i][r] * matrix2->a[r][j];
-//                }
-//            }
-//        }
-//        return new Matrix(array, height, width);
     }
 }
 
@@ -162,36 +159,27 @@ Matrix* Matrix::multiplyOMP(Matrix *matrix1, Matrix* matrix2) {
         throw MatrixMultiplicationException(matrix1, matrix2);
     }
     else {
-         auto *resultMatrix = new Matrix(matrix1->getHeight(), matrix2->getWidth());
-
-//        int **array;
-//        int height = matrix1->getHeight();
-//        int width = matrix2->getWidth();
-//
-//        array = new int *[matrix1->getHeight()];
-//        for (int i = 0; i < height; i++) {
-//            array[i] = new int[width];
-//        }
-
-        #pragma omp parallel for shared(matrix1, matrix2, resultMatrix)
-        for (int i = 0; i < resultMatrix->getHeight(); i++) {
+        auto *resultMatrix = new Matrix(matrix1->getHeight(), matrix2->getWidth());
+        if (resultMatrix->getHeight() >= resultMatrix->getWidth()) {
+            #pragma omp parallel for shared(matrix1, matrix2, resultMatrix) schedule(runtime)
+            for (int i = 0; i < resultMatrix->getHeight(); i++) {
+                for (int j = 0; j < resultMatrix->getWidth(); j++) {
+                    for (int r = 0; r < matrix1->getWidth(); r++) {
+                        resultMatrix->a[i][j] += resultMatrix->a[i][j] + matrix1->a[i][r] * matrix2->a[r][j];
+                    }
+                }
+            }
+        } else {
+            #pragma omp parallel for shared(matrix1, matrix2, resultMatrix) schedule(runtime)
             for (int j = 0; j < resultMatrix->getWidth(); j++) {
-                for (int r = 0; r < matrix1->getWidth(); r++) {
-                    resultMatrix->a[i][j] += resultMatrix->a[i][j] + matrix1->a[i][r] * matrix2->a[r][j];
+                for (int i = 0; i < resultMatrix->getHeight(); i++) {
+                    for (int r = 0; r < matrix1->getWidth(); r++) {
+                        resultMatrix->a[i][j] += resultMatrix->a[i][j] + matrix1->a[i][r] * matrix2->a[r][j];
+                    }
                 }
             }
         }
         return resultMatrix;
-
-//        #pragma omp parallel for shared(matrix1, matrix2, array)
-//        for (int i = 0; i < height; i++) {
-//            for (int j = 0; j < width; j++) {
-//                for (int r = 0; r < matrix1->getWidth(); r++) {
-//                    array[i][j] += array[i][j] + matrix1->a[i][r] * matrix2->a[r][j];
-//                }
-//            }
-//        }
-//        return new Matrix(array, height, width);
     }
 }
 

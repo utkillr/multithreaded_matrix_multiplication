@@ -27,6 +27,7 @@ public:
 
     int getWidth();
     int getHeight();
+    bool equals(Matrix *matrix);
 
     void print(std::ostream &out);
 
