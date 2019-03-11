@@ -153,6 +153,36 @@ Matrix* Matrix::multiply(Matrix* matrix1, Matrix *matrix2) {
     }
 }
 
+//Matrix* Matrix::multiplyOMP(Matrix *matrix1, Matrix* matrix2) {
+//    // check if we can multiply
+//    if (matrix1->getWidth() != matrix2->getHeight()) {
+//        throw MatrixMultiplicationException(matrix1, matrix2);
+//    }
+//    else {
+//        auto *resultMatrix = new Matrix(matrix1->getHeight(), matrix2->getWidth());
+//        if (resultMatrix->getHeight() >= resultMatrix->getWidth()) {
+//            #pragma omp parallel for shared(matrix1, matrix2, resultMatrix) schedule(dynamic)
+//            for (int i = 0; i < resultMatrix->getHeight(); i++) {
+//                for (int j = 0; j < resultMatrix->getWidth(); j++) {
+//                    for (int r = 0; r < matrix1->getWidth(); r++) {
+//                        resultMatrix->a[i][j] += resultMatrix->a[i][j] + matrix1->a[i][r] * matrix2->a[r][j];
+//                    }
+//                }
+//            }
+//        } else {
+//            #pragma omp parallel for shared(matrix1, matrix2, resultMatrix) schedule(dynamic)
+//            for (int j = 0; j < resultMatrix->getWidth(); j++) {
+//                for (int i = 0; i < resultMatrix->getHeight(); i++) {
+//                    for (int r = 0; r < matrix1->getWidth(); r++) {
+//                        resultMatrix->a[i][j] += resultMatrix->a[i][j] + matrix1->a[i][r] * matrix2->a[r][j];
+//                    }
+//                }
+//            }
+//        }
+//        return resultMatrix;
+//    }
+//}
+
 Matrix* Matrix::multiplyOMP(Matrix *matrix1, Matrix* matrix2) {
     // check if we can multiply
     if (matrix1->getWidth() != matrix2->getHeight()) {
@@ -160,26 +190,15 @@ Matrix* Matrix::multiplyOMP(Matrix *matrix1, Matrix* matrix2) {
     }
     else {
         auto *resultMatrix = new Matrix(matrix1->getHeight(), matrix2->getWidth());
-        if (resultMatrix->getHeight() >= resultMatrix->getWidth()) {
-            #pragma omp parallel for shared(matrix1, matrix2, resultMatrix) schedule(dynamic)
-            for (int i = 0; i < resultMatrix->getHeight(); i++) {
-                for (int j = 0; j < resultMatrix->getWidth(); j++) {
-                    for (int r = 0; r < matrix1->getWidth(); r++) {
-                        resultMatrix->a[i][j] += resultMatrix->a[i][j] + matrix1->a[i][r] * matrix2->a[r][j];
-                    }
-                }
-            }
-        } else {
-            #pragma omp parallel for shared(matrix1, matrix2, resultMatrix) schedule(dynamic)
-            for (int j = 0; j < resultMatrix->getWidth(); j++) {
-                for (int i = 0; i < resultMatrix->getHeight(); i++) {
-                    for (int r = 0; r < matrix1->getWidth(); r++) {
-                        resultMatrix->a[i][j] += resultMatrix->a[i][j] + matrix1->a[i][r] * matrix2->a[r][j];
-                    }
-                }
+        int ij, i, j;
+        #pragma omp parallel for shared(matrix1, matrix2, resultMatrix) private(ij, i, j) schedule(dynamic)
+        for (ij = 0; ij < resultMatrix->getHeight() * resultMatrix->getWidth(); ij++) {
+            i = ij / resultMatrix->getWidth();
+            j = ij % resultMatrix->getHeight();
+            for (int r = 0; r < matrix1->getWidth(); r++) {
+                resultMatrix->a[i][j] += resultMatrix->a[i][j] + matrix1->a[i][r] * matrix2->a[r][j];
             }
         }
         return resultMatrix;
     }
 }
-

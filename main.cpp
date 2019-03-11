@@ -4,6 +4,7 @@
 #include <omp.h>
 #include "matrix.h"
 #include "exception/matrix_multiplication_exception.h"
+#include "exception/matrix_multiplication_result_exception.h"
 #include "exception/matrix_initialization_exception.h"
 
 int main() {
@@ -29,7 +30,7 @@ int main() {
 
     omp_set_dynamic(0);
 
-    outputFile.open("C:\\university\\multithreading\\matrix_multiplication\\output.csv");
+    outputFile.open("C:\\university\\multithreading\\matrix_multiplication\\flat_output.csv");
 
     try {
         Matrix *multiplication;
@@ -57,7 +58,7 @@ int main() {
                 if (!res) {
                     delete multiplication;
                     delete multiplicationOMP;
-                    throw MatrixMultiplicationException(matrix1, matrix2);
+                    throw MatrixMultiplicationResultException();
                 }
                 delete multiplicationOMP;
             }
@@ -66,7 +67,9 @@ int main() {
         delete multiplication;
 
     } catch (MatrixMultiplicationException e) {
-        std::cout << e.what();
+        std::cout << e.what() << std::endl;
+    } catch (MatrixMultiplicationResultException e) {
+        std::cout << e.what() << std::endl;
     }
 
     outputFile.close();
